@@ -11,8 +11,9 @@ Aplicativo Android da NovaTech Solutions para consultar o sistema do projeto PIM
 - sessão persistida no armazenamento seguro do Android;
 - encerramento automático da sessão quando a API retorna `401`;
 - dashboard com totais, ativos, manutenção, distribuição, itens críticos e atividades;
-- listagem e busca local nas nove categorias do inventário;
-- detalhes de cada equipamento;
+- CRUD do inventário nas nove categorias: cadastro, consulta, edição e exclusão;
+- ativação e inativação de itens sem perder os demais dados cadastrados;
+- busca local, detalhes, validação de formulários e confirmação antes da exclusão;
 - perfil do usuário e logout;
 - navegação adaptável para celular e tablet.
 
@@ -65,6 +66,6 @@ flutter build apk --debug
 
 ## Próximas etapas planejadas
 
-- criação e edição de ativos;
+- seletores visuais para vínculos entre celulares, chips e processadores;
 - relatórios em PDF e Excel;
 - tema escuro e preferências persistidas.

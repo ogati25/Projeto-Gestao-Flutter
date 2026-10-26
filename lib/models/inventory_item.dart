@@ -13,6 +13,18 @@ enum InventoryCategory {
 
   final String endpoint;
   final String label;
+
+  String get singularLabel => switch (this) {
+    InventoryCategory.computers => 'Computador',
+    InventoryCategory.monitors => 'Monitor',
+    InventoryCategory.phones => 'Celular',
+    InventoryCategory.simCards => 'Chip',
+    InventoryCategory.mice => 'Mouse',
+    InventoryCategory.keyboards => 'Teclado',
+    InventoryCategory.headsets => 'Fone',
+    InventoryCategory.extensions => 'Ramal',
+    InventoryCategory.extras => 'Extra',
+  };
 }
 
 class InventoryItem {

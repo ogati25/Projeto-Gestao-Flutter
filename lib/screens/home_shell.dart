@@ -39,7 +39,11 @@ class _HomeShellState extends State<HomeShell> {
   Widget build(BuildContext context) {
     final pages = <Widget>[
       DashboardScreen(service: widget.dashboardService, user: widget.user),
-      InventoryScreen(service: widget.inventoryService),
+      InventoryScreen(
+        service: widget.inventoryService,
+        defaultOwner: widget.user.fullName,
+        defaultDepartment: widget.user.department,
+      ),
       ProfileScreen(
         user: widget.user,
         sessionController: widget.sessionController,

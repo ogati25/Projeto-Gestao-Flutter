@@ -22,4 +22,29 @@ class InventoryService {
         )
         .toList();
   }
+
+  Future<InventoryItem> create(
+    InventoryCategory category,
+    Map<String, dynamic> payload,
+  ) async {
+    final response = await _apiClient.post(category.endpoint, body: payload);
+    if (response is! Map<String, dynamic>) {
+      throw const FormatException('Resposta de criação inválida.');
+    }
+    return InventoryItem.fromJson(category, response);
+  }
+
+  Future<void> update(
+    InventoryCategory category,
+    String id,
+    Map<String, dynamic> payload,
+  ) async {
+    if (id.isEmpty) throw const FormatException('Item sem identificador.');
+    await _apiClient.put('${category.endpoint}/$id', body: payload);
+  }
+
+  Future<void> delete(InventoryCategory category, String id) async {
+    if (id.isEmpty) throw const FormatException('Item sem identificador.');
+    await _apiClient.delete('${category.endpoint}/$id');
+  }
 }
