@@ -34,6 +34,9 @@ void main() {
     expect(find.text('Bem-vindo de volta'), findsOneWidget);
     expect(find.byType(TextFormField), findsNWidgets(2));
     expect(find.widgetWithText(FilledButton, 'Entrar'), findsOneWidget);
+    expect(find.text('Esqueci minha senha'), findsOneWidget);
+    expect(find.text('Criar uma conta'), findsOneWidget);
+    expect(find.text('Já tenho um código de confirmação'), findsOneWidget);
 
     await tester.tap(find.widgetWithText(FilledButton, 'Entrar'));
     await tester.pump();

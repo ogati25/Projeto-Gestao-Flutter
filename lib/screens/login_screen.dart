@@ -2,6 +2,9 @@ import 'package:flutter/material.dart';
 
 import '../core/theme/app_theme.dart';
 import '../state/session_controller.dart';
+import 'password_recovery_screen.dart';
+import 'register_screen.dart';
+import 'verify_email_screen.dart';
 
 class LoginScreen extends StatefulWidget {
   const LoginScreen({super.key, required this.sessionController});
@@ -33,6 +36,48 @@ class _LoginScreenState extends State<LoginScreen> {
     await _session.login(
       email: _emailController.text,
       password: _passwordController.text,
+    );
+  }
+
+  Future<void> _openRegistration() async {
+    _session.clearError();
+    final result = await Navigator.of(context).push<RegistrationResult>(
+      MaterialPageRoute(
+        builder: (_) => RegisterScreen(authService: _session.authService),
+      ),
+    );
+    if (!mounted || result == null) return;
+    _emailController.text = result.email;
+    ScaffoldMessenger.of(context)
+        .showSnackBar(SnackBar(content: Text(result.message)));
+  }
+
+  Future<void> _openPasswordRecovery() async {
+    _session.clearError();
+    final result = await Navigator.of(context).push<String>(
+      MaterialPageRoute(
+        builder: (_) => PasswordRecoveryScreen(
+          authService: _session.authService,
+          initialEmail: _emailController.text.trim(),
+        ),
+      ),
+    );
+    if (!mounted || result == null) return;
+    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(result)));
+  }
+
+  Future<void> _openEmailVerification() async {
+    _session.clearError();
+    final verified = await Navigator.of(context).push<bool>(
+      MaterialPageRoute(
+        builder: (_) => VerifyEmailScreen(authService: _session.authService),
+      ),
+    );
+    if (!mounted || verified != true) return;
+    ScaffoldMessenger.of(context).showSnackBar(
+      const SnackBar(
+        content: Text('E-mail confirmado. Agora você pode entrar.'),
+      ),
     );
   }
 
@@ -154,6 +199,13 @@ class _LoginScreenState extends State<LoginScreen> {
                   return null;
                 },
               ),
+              Align(
+                alignment: Alignment.centerRight,
+                child: TextButton(
+                  onPressed: authenticating ? null : _openPasswordRecovery,
+                  child: const Text('Esqueci minha senha'),
+                ),
+              ),
               if (_session.errorMessage != null) ...[
                 const SizedBox(height: 16),
                 Semantics(
@@ -195,12 +247,15 @@ class _LoginScreenState extends State<LoginScreen> {
                       )
                     : const Text('Entrar'),
               ),
-              const SizedBox(height: 14),
-              Text(
-                'Use uma conta já cadastrada e com o e-mail confirmado.',
-                textAlign: TextAlign.center,
-                style: Theme.of(context).textTheme.bodySmall
-                    ?.copyWith(color: AppColors.muted),
+              const SizedBox(height: 12),
+              OutlinedButton(
+                onPressed: authenticating ? null : _openRegistration,
+                child: const Text('Criar uma conta'),
+              ),
+              const SizedBox(height: 4),
+              TextButton(
+                onPressed: authenticating ? null : _openEmailVerification,
+                child: const Text('Já tenho um código de confirmação'),
               ),
             ],
           ),

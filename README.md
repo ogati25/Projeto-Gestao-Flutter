@@ -5,6 +5,9 @@ Aplicativo Android da NovaTech Solutions para consultar o sistema do projeto PIM
 ## O que já funciona
 
 - login pela API com JWT;
+- cadastro com carregamento dos setores da API;
+- confirmação de e-mail por código e reenvio após o cadastro;
+- recuperação e redefinição de senha;
 - sessão persistida no armazenamento seguro do Android;
 - encerramento automático da sessão quando a API retorna `401`;
 - dashboard com totais, ativos, manutenção, distribuição, itens críticos e atividades;
@@ -62,8 +65,6 @@ flutter build apk --debug
 
 ## Próximas etapas planejadas
 
-- cadastro e confirmação de e-mail;
 - criação e edição de ativos;
-- recuperação de senha;
 - relatórios em PDF e Excel;
 - tema escuro e preferências persistidas.
