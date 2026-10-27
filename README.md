@@ -1,6 +1,20 @@
 # Gestão de TI — aplicativo Flutter
 
-Aplicativo Android da NovaTech Solutions para consultar o sistema do projeto PIM. Este projeto é independente do backend e está em uma pasta própria.
+Aplicativo Android da NovaTech Solutions integrado ao sistema web do projeto PIM. O código fica em um repositório separado, mas o aplicativo consome a mesma API ASP.NET Core e o mesmo banco MySQL usados pela interface web.
+
+## Integração com o sistema web
+
+```text
+Sistema web ─┐
+             ├─ API ASP.NET Core ─ MySQL
+App Flutter ─┘
+```
+
+- usuários e senhas são os mesmos nos dois clientes;
+- login, dashboard e inventário usam os mesmos endpoints `/api`;
+- cadastros e alterações feitos em um cliente aparecem no outro após atualizar a tela;
+- o aplicativo não possui uma cópia local do inventário: localmente ficam apenas o JWT e os dados básicos da sessão;
+- não existe sincronização paralela nem banco exclusivo do aplicativo.
 
 ## O que já funciona
 
@@ -23,7 +37,7 @@ Aplicativo Android da NovaTech Solutions para consultar o sistema do projeto PIM
 - Backend: `C:\Projetos\Gestao TI\Projeto-Gestao-PIM`
 - API local: `http://localhost:8080`
 
-O aplicativo não contém banco próprio. Todos os dados vêm da API, que usa MySQL.
+O aplicativo não contém banco próprio. Todos os dados vêm da API ASP.NET Core, que usa MySQL.
 
 ## Executar no emulador Android
 
