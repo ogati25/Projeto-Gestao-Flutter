@@ -11,10 +11,16 @@ import '../widgets/metric_card.dart';
 import '../widgets/status_badge.dart';
 
 class DashboardScreen extends StatefulWidget {
-  const DashboardScreen({super.key, required this.service, required this.user});
+  const DashboardScreen({
+    super.key,
+    required this.service,
+    required this.user,
+    required this.active,
+  });
 
   final DashboardService service;
   final AppUser user;
+  final bool active;
 
   @override
   State<DashboardScreen> createState() => _DashboardScreenState();
@@ -24,30 +30,40 @@ class _DashboardScreenState extends State<DashboardScreen> {
   DashboardSummary? _summary;
   String? _error;
   DateTime? _updatedAt;
+  int _loadGeneration = 0;
 
   @override
   void initState() {
     super.initState();
-    _load();
+    if (widget.active) _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant DashboardScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active && !oldWidget.active) _load();
   }
 
   Future<void> _load() async {
+    final generation = ++_loadGeneration;
     setState(() => _error = null);
     try {
       final summary = await widget.service.loadSummary();
-      if (!mounted) return;
+      if (!mounted || generation != _loadGeneration) return;
       setState(() {
         _summary = summary;
         _updatedAt = DateTime.now();
       });
     } on ApiException catch (error) {
-      if (mounted) setState(() => _error = error.displayMessage);
+      if (mounted && generation == _loadGeneration) {
+        setState(() => _error = error.displayMessage);
+      }
     } on FormatException {
-      if (mounted) {
+      if (mounted && generation == _loadGeneration) {
         setState(() => _error = 'O servidor enviou dados inesperados.');
       }
     } catch (_) {
-      if (mounted) {
+      if (mounted && generation == _loadGeneration) {
         setState(() => _error = 'Não foi possível abrir o dashboard.');
       }
     }
@@ -69,6 +85,10 @@ class _DashboardScreenState extends State<DashboardScreen> {
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.fromLTRB(18, 20, 18, 32),
         children: [
+          if (_error != null) ...[
+            AppRefreshErrorBanner(message: _error!, onRetry: _load),
+            const SizedBox(height: 14),
+          ],
           _DashboardGreeting(user: widget.user, updatedAt: _updatedAt),
           const SizedBox(height: 20),
           _MetricsGrid(summary: summary),
@@ -158,7 +178,7 @@ class _MetricsGrid extends StatelessWidget {
               color: AppColors.info,
             ),
             MetricCard(
-              label: 'Ativos em uso',
+              label: 'Itens ativos',
               value: summary.activeTotal.toString(),
               icon: Icons.check_circle_outline,
               color: AppColors.success,

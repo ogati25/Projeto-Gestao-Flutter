@@ -35,14 +35,24 @@ class _HomeShellState extends State<HomeShell> {
 
   static const _titles = <String>['Dashboard', 'Inventário', 'Meu perfil'];
 
+  void _selectIndex(int index) {
+    if (index == _selectedIndex) return;
+    setState(() => _selectedIndex = index);
+  }
+
   @override
   Widget build(BuildContext context) {
     final pages = <Widget>[
-      DashboardScreen(service: widget.dashboardService, user: widget.user),
+      DashboardScreen(
+        service: widget.dashboardService,
+        user: widget.user,
+        active: _selectedIndex == 0,
+      ),
       InventoryScreen(
         service: widget.inventoryService,
         defaultOwner: widget.user.fullName,
         defaultDepartment: widget.user.department,
+        active: _selectedIndex == 1,
       ),
       ProfileScreen(
         user: widget.user,
@@ -62,18 +72,24 @@ class _HomeShellState extends State<HomeShell> {
               style: const TextStyle(fontWeight: FontWeight.w800),
             ),
             actions: [
-              IconButton(
-                tooltip: 'Meu perfil',
-                onPressed: () => setState(() => _selectedIndex = 2),
-                icon: CircleAvatar(
-                  radius: 16,
-                  backgroundColor: AppColors.blue,
-                  foregroundColor: Colors.white,
-                  child: Text(
-                    widget.user.initials,
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
+              Semantics(
+                label: 'Meu perfil',
+                button: true,
+                onTap: () => _selectIndex(2),
+                excludeSemantics: true,
+                child: IconButton(
+                  tooltip: 'Meu perfil',
+                  onPressed: () => _selectIndex(2),
+                  icon: CircleAvatar(
+                    radius: 16,
+                    backgroundColor: AppColors.blue,
+                    foregroundColor: Colors.white,
+                    child: Text(
+                      widget.user.initials,
+                      style: const TextStyle(
+                        fontSize: 11,
+                        fontWeight: FontWeight.w800,
+                      ),
                     ),
                   ),
                 ),
@@ -87,9 +103,7 @@ class _HomeShellState extends State<HomeShell> {
                 _DesktopNavigation(
                   selectedIndex: _selectedIndex,
                   extended: extended,
-                  onDestinationSelected: (index) {
-                    setState(() => _selectedIndex = index);
-                  },
+                  onDestinationSelected: _selectIndex,
                   onLogout: widget.sessionController.logout,
                 ),
               Expanded(
@@ -101,9 +115,7 @@ class _HomeShellState extends State<HomeShell> {
               ? null
               : NavigationBar(
                   selectedIndex: _selectedIndex,
-                  onDestinationSelected: (index) {
-                    setState(() => _selectedIndex = index);
-                  },
+                  onDestinationSelected: _selectIndex,
                   destinations: const [
                     NavigationDestination(
                       icon: Icon(Icons.dashboard_outlined),

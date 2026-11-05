@@ -398,7 +398,9 @@ class _InventoryFormScreenState extends State<InventoryFormScreen> {
         TextFormField(
           controller: _fieldControllers[field.key],
           enabled: !_submitting,
-          keyboardType: _keyboardTypeFor(field.kind),
+          keyboardType: field.maxLines > 1
+              ? TextInputType.multiline
+              : _keyboardTypeFor(field.kind),
           textInputAction: field.maxLines > 1
               ? TextInputAction.newline
               : TextInputAction.next,

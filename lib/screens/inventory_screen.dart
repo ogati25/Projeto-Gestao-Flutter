@@ -17,11 +17,13 @@ class InventoryScreen extends StatefulWidget {
     required this.service,
     required this.defaultOwner,
     required this.defaultDepartment,
+    required this.active,
   });
 
   final InventoryService service;
   final String defaultOwner;
   final String defaultDepartment;
+  final bool active;
 
   @override
   State<InventoryScreen> createState() => _InventoryScreenState();
@@ -46,7 +48,15 @@ class _InventoryScreenState extends State<InventoryScreen> {
   @override
   void initState() {
     super.initState();
-    _load();
+    if (widget.active) _load();
+  }
+
+  @override
+  void didUpdateWidget(covariant InventoryScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.active && !oldWidget.active) {
+      _load(showLoading: _items == null);
+    }
   }
 
   @override
@@ -247,6 +257,11 @@ class _InventoryScreenState extends State<InventoryScreen> {
               ),
             ),
           ),
+          if (_items != null && _error != null)
+            Padding(
+              padding: const EdgeInsets.fromLTRB(16, 0, 16, 10),
+              child: AppRefreshErrorBanner(message: _error!, onRetry: _load),
+            ),
           Expanded(child: _buildContent()),
         ],
       ),
