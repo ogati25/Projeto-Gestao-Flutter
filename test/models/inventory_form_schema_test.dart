@@ -157,7 +157,7 @@ void main() {
           .singleWhere((item) => item.key == key);
     }
 
-    test('valida numero de chip nos dois formatos aceitos', () {
+    test('valida numero de chip nacional e internacional', () {
       final number = field(InventoryCategory.simCards, 'numero');
 
       expect(
@@ -182,7 +182,7 @@ void main() {
           number,
           '+55 11 99999-1234',
         ),
-        contains('(XX)'),
+        isNull,
       );
     });
 

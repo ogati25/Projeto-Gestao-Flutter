@@ -2,6 +2,11 @@ import 'inventory_item.dart';
 
 enum InventoryFieldKind {
   text,
+  select,
+  processorSelect,
+  phoneSelect,
+  chipMultiSelect,
+  whatsappMultiSelect,
   integer,
   decimal,
   boolean,
@@ -21,6 +26,7 @@ class InventoryFieldSpec {
     this.maxLines = 1,
     this.minimum,
     this.maximum,
+    this.optionType,
   });
 
   final String key;
@@ -31,6 +37,7 @@ class InventoryFieldSpec {
   final int maxLines;
   final num? minimum;
   final num? maximum;
+  final String? optionType;
 }
 
 List<InventoryFieldSpec> inventoryFieldsFor(InventoryCategory category) {
@@ -40,12 +47,20 @@ List<InventoryFieldSpec> inventoryFieldsFor(InventoryCategory category) {
       InventoryFieldSpec(
         key: 'tipo',
         label: 'Tipo',
-        hint: 'Ex.: Desktop ou Notebook',
+        kind: InventoryFieldKind.select,
+        required: true,
+        optionType: 'TipoComputador',
+      ),
+      InventoryFieldSpec(
+        key: 'processadorId',
+        label: 'Processador',
+        kind: InventoryFieldKind.processorSelect,
       ),
       InventoryFieldSpec(
         key: 'geracaoRAM',
         label: 'Geração da RAM',
-        hint: 'Ex.: DDR4',
+        kind: InventoryFieldKind.select,
+        optionType: 'GeracaoRAM',
       ),
       InventoryFieldSpec(
         key: 'memoriaRAM',
@@ -82,10 +97,27 @@ List<InventoryFieldSpec> inventoryFieldsFor(InventoryCategory category) {
       InventoryFieldSpec(
         key: 'sistemaOperacional',
         label: 'Sistema operacional',
+        kind: InventoryFieldKind.select,
+        optionType: 'SistemaOperacional',
       ),
-      InventoryFieldSpec(key: 'ativacaoSO', label: 'Ativação do sistema'),
-      InventoryFieldSpec(key: 'office', label: 'Office'),
-      InventoryFieldSpec(key: 'ativacaoOffice', label: 'Ativação do Office'),
+      InventoryFieldSpec(
+        key: 'ativacaoSO',
+        label: 'Ativação do sistema',
+        kind: InventoryFieldKind.select,
+        optionType: 'AtivacaoSO',
+      ),
+      InventoryFieldSpec(
+        key: 'office',
+        label: 'Office',
+        kind: InventoryFieldKind.select,
+        optionType: 'TipoOffice',
+      ),
+      InventoryFieldSpec(
+        key: 'ativacaoOffice',
+        label: 'Ativação do Office',
+        kind: InventoryFieldKind.select,
+        optionType: 'AtivacaoOffice',
+      ),
       InventoryFieldSpec(key: 'ip', label: 'Endereço IP'),
     ],
     InventoryCategory.monitors => const [
@@ -100,7 +132,8 @@ List<InventoryFieldSpec> inventoryFieldsFor(InventoryCategory category) {
       InventoryFieldSpec(
         key: 'resolucao',
         label: 'Resolução',
-        hint: 'Ex.: 1920x1080',
+        kind: InventoryFieldKind.select,
+        optionType: 'Resolucao',
       ),
       InventoryFieldSpec(
         key: 'frequencia',
@@ -145,12 +178,29 @@ List<InventoryFieldSpec> inventoryFieldsFor(InventoryCategory category) {
       ),
       InventoryFieldSpec(
         key: 'conectividade',
-        label: 'Conector',
-        hint: 'Ex.: USB-C',
+        label: 'Conector carregador',
+        kind: InventoryFieldKind.select,
+        optionType: 'TipoConectorCarregador',
+      ),
+      InventoryFieldSpec(
+        key: 'chipIds',
+        label: 'Chips',
+        kind: InventoryFieldKind.chipMultiSelect,
+      ),
+      InventoryFieldSpec(
+        key: 'contasWhatsapp',
+        label: 'Contas WhatsApp',
+        kind: InventoryFieldKind.whatsappMultiSelect,
       ),
     ],
     InventoryCategory.simCards => const [
-      InventoryFieldSpec(key: 'operadora', label: 'Operadora', required: true),
+      InventoryFieldSpec(
+        key: 'operadora',
+        label: 'Operadora',
+        kind: InventoryFieldKind.select,
+        required: true,
+        optionType: 'Operadora',
+      ),
       InventoryFieldSpec(
         key: 'numero',
         label: 'Número',
@@ -166,19 +216,39 @@ List<InventoryFieldSpec> inventoryFieldsFor(InventoryCategory category) {
       ),
       InventoryFieldSpec(
         key: 'celularId',
-        label: 'ID do celular vinculado',
-        hint: 'Opcional',
+        label: 'Celular vinculado',
+        kind: InventoryFieldKind.phoneSelect,
       ),
     ],
     InventoryCategory.mice => const [
       InventoryFieldSpec(key: 'modelo', label: 'Modelo', required: true),
-      InventoryFieldSpec(key: 'tipo', label: 'Tipo'),
-      InventoryFieldSpec(key: 'conectividade', label: 'Conectividade'),
+      InventoryFieldSpec(
+        key: 'tipo',
+        label: 'Tipo',
+        kind: InventoryFieldKind.select,
+        optionType: 'TipoPeriferico',
+      ),
+      InventoryFieldSpec(
+        key: 'conectividade',
+        label: 'Conectividade',
+        kind: InventoryFieldKind.select,
+        optionType: 'Conectividade',
+      ),
     ],
     InventoryCategory.keyboards => const [
       InventoryFieldSpec(key: 'modelo', label: 'Modelo', required: true),
-      InventoryFieldSpec(key: 'tipo', label: 'Tipo'),
-      InventoryFieldSpec(key: 'conectividade', label: 'Conectividade'),
+      InventoryFieldSpec(
+        key: 'tipo',
+        label: 'Tipo',
+        kind: InventoryFieldKind.select,
+        optionType: 'TipoPeriferico',
+      ),
+      InventoryFieldSpec(
+        key: 'conectividade',
+        label: 'Conectividade',
+        kind: InventoryFieldKind.select,
+        optionType: 'Conectividade',
+      ),
       InventoryFieldSpec(
         key: 'tamanho',
         label: 'Tamanho (%)',
@@ -186,17 +256,32 @@ List<InventoryFieldSpec> inventoryFieldsFor(InventoryCategory category) {
         minimum: 0,
         maximum: 100,
       ),
-      InventoryFieldSpec(key: 'switch', label: 'Switch'),
+      InventoryFieldSpec(
+        key: 'switch',
+        label: 'Switch',
+        kind: InventoryFieldKind.select,
+        optionType: 'Switch',
+      ),
     ],
     InventoryCategory.headsets => const [
       InventoryFieldSpec(key: 'modelo', label: 'Modelo', required: true),
-      InventoryFieldSpec(key: 'tipo', label: 'Tipo'),
+      InventoryFieldSpec(
+        key: 'tipo',
+        label: 'Tipo',
+        kind: InventoryFieldKind.select,
+        optionType: 'TipoPeriferico',
+      ),
       InventoryFieldSpec(
         key: 'microfone',
         label: 'Possui microfone',
         kind: InventoryFieldKind.boolean,
       ),
-      InventoryFieldSpec(key: 'conectividade', label: 'Conectividade'),
+      InventoryFieldSpec(
+        key: 'conectividade',
+        label: 'Conectividade',
+        kind: InventoryFieldKind.select,
+        optionType: 'Conectividade',
+      ),
     ],
     InventoryCategory.extensions => const [
       InventoryFieldSpec(key: 'modelo', label: 'Modelo', required: true),
@@ -257,13 +342,26 @@ abstract final class InventoryPayloadBuilder {
       ..['observacoes'] = _nullableText(observations);
 
     for (final field in inventoryFieldsFor(category)) {
+      if (field.kind == InventoryFieldKind.boolean) {
+        if (toggles.containsKey(field.key)) {
+          payload[field.key] = toggles[field.key] ?? false;
+        }
+        continue;
+      }
+      if (!inputs.containsKey(field.key)) continue;
+
       final input = inputs[field.key] ?? '';
       payload[field.key] = switch (field.kind) {
         InventoryFieldKind.text =>
           field.required ? input.trim() : _nullableText(input),
+        InventoryFieldKind.select ||
+        InventoryFieldKind.processorSelect ||
+        InventoryFieldKind.phoneSelect => _nullableText(input),
+        InventoryFieldKind.chipMultiSelect ||
+        InventoryFieldKind.whatsappMultiSelect => _parseStringList(input),
         InventoryFieldKind.integer => _parseInteger(input, field.label),
         InventoryFieldKind.decimal => _parseDecimal(input, field.label),
-        InventoryFieldKind.boolean => toggles[field.key] ?? false,
+        InventoryFieldKind.boolean => false,
         InventoryFieldKind.integerList => _parseIntegerList(input, field.label),
         InventoryFieldKind.stringList => _parseStringList(input),
         InventoryFieldKind.disks => _parsePairs(
@@ -429,6 +527,9 @@ abstract final class InventoryPayloadBuilder {
       InventoryFieldKind.disks => _formatPairs(value, valueKey: 'tamanho'),
       InventoryFieldKind.videoCards => _formatPairs(value, valueKey: 'vram'),
       InventoryFieldKind.boolean => '',
+      InventoryFieldKind.chipMultiSelect ||
+      InventoryFieldKind.whatsappMultiSelect =>
+        value is Iterable ? value.join(', ') : '',
       _ => value.toString(),
     };
   }
@@ -442,7 +543,15 @@ abstract final class InventoryPayloadBuilder {
     if (field.required && trimmed.isEmpty) {
       return 'Informe ${field.label.toLowerCase()}.';
     }
-    if (trimmed.isEmpty && field.kind == InventoryFieldKind.text) return null;
+    if (trimmed.isEmpty &&
+        (field.kind == InventoryFieldKind.text ||
+            field.kind == InventoryFieldKind.select ||
+            field.kind == InventoryFieldKind.processorSelect ||
+            field.kind == InventoryFieldKind.phoneSelect ||
+            field.kind == InventoryFieldKind.chipMultiSelect ||
+            field.kind == InventoryFieldKind.whatsappMultiSelect)) {
+      return null;
+    }
 
     try {
       final parsed = switch (field.kind) {
@@ -491,8 +600,18 @@ abstract final class InventoryPayloadBuilder {
     }
 
     if (category == InventoryCategory.simCards && field.key == 'numero') {
-      final valid = RegExp(r'^\(\d{2}\) \d{4,5}-\d{4}$').hasMatch(trimmed);
-      if (!valid) return 'Use o formato (XX) XXXX-XXXX ou (XX) XXXXX-XXXX.';
+      final internationalDigits = trimmed.replaceAll(RegExp(r'\D'), '');
+      final international =
+          trimmed.startsWith('+') &&
+          RegExp(r'^\+[0-9 ()-]+$').hasMatch(trimmed) &&
+          internationalDigits.length >= 10 &&
+          internationalDigits.length <= 15;
+      final valid =
+          RegExp(r'^\(\d{2}\) \d{4,5}-\d{4}$').hasMatch(trimmed) ||
+          international;
+      if (!valid) {
+        return 'Use (XX) XXXX-XXXX, (XX) XXXXX-XXXX ou +código internacional.';
+      }
     }
     return null;
   }

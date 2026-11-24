@@ -30,7 +30,7 @@ class InventoryFormScreen extends StatefulWidget {
 }
 
 class _InventoryFormScreenState extends State<InventoryFormScreen> {
-  static const _statuses = <String>[
+  static const _fallbackStatuses = <String>[
     'EmUso',
     'EmEstoque',
     'EmManutenção',
@@ -45,11 +45,23 @@ class _InventoryFormScreenState extends State<InventoryFormScreen> {
   late final TextEditingController _observationsController;
   final _fieldControllers = <String, TextEditingController>{};
   final _toggles = <String, bool>{};
+  final _options = <String, List<String>>{};
+  List<InventoryLookupItem> _processors = const [];
+  List<InventoryLookupItem> _phones = const [];
+  List<InventoryLookupItem> _chips = const [];
+  List<String> _ramModules = [];
+  List<_ComponentValue> _disks = [];
+  List<_ComponentValue> _videoCards = [];
+  List<String> _videoConnectors = [];
+  List<String> _selectedChipIds = [];
+  List<String> _selectedWhatsappIds = [];
 
   late DateTime _acquisitionDate;
   late String _status;
   late bool _active;
   bool _submitting = false;
+  bool _loadingLookups = true;
+  String? _lookupError;
   String? _submitError;
 
   @override
@@ -88,6 +100,77 @@ class _InventoryFormScreenState extends State<InventoryFormScreen> {
         );
       }
     }
+    _initializeStructuredValues(initial);
+    _loadLookups();
+  }
+
+  void _initializeStructuredValues(Map<String, dynamic> initial) {
+    if (widget.category == InventoryCategory.computers) {
+      _ramModules = _asList(initial['memoriaRAM'])
+          .map((value) => value.toString())
+          .toList();
+      _disks = _asList(initial['discos']).map(_componentFromDisk).toList();
+      _videoCards = _asList(initial['placasVideo'])
+          .map(_componentFromVideoCard)
+          .toList();
+      _videoConnectors = _asList(initial['conectoresVideo'])
+          .map((value) => value.toString())
+          .toList();
+    }
+    if (widget.category == InventoryCategory.phones) {
+      _selectedChipIds = _stringIds(initial['chipIds']);
+      _selectedWhatsappIds = _stringIds(initial['contasWhatsapp']);
+      _syncRelationControllers();
+    }
+  }
+
+  Future<void> _loadLookups() async {
+    var options = <String, List<String>>{};
+    var processors = <InventoryLookupItem>[];
+    var phones = <InventoryLookupItem>[];
+    var chips = <InventoryLookupItem>[];
+    final failedLists = <String>[];
+
+    try {
+      options = await widget.service.loadOptions();
+    } catch (_) {
+      failedLists.add('opções');
+    }
+    if (widget.category == InventoryCategory.computers) {
+      try {
+        processors = await widget.service.listProcessors();
+      } catch (_) {
+        failedLists.add('processadores');
+      }
+    }
+    if (widget.category == InventoryCategory.simCards) {
+      try {
+        phones = await widget.service.listPhones();
+      } catch (_) {
+        failedLists.add('celulares');
+      }
+    }
+    if (widget.category == InventoryCategory.phones) {
+      try {
+        chips = await widget.service.listChips();
+      } catch (_) {
+        failedLists.add('chips');
+      }
+    }
+
+    if (!mounted) return;
+    setState(() {
+      _options
+        ..clear()
+        ..addAll(options);
+      _processors = processors;
+      _phones = phones;
+      _chips = chips;
+      _loadingLookups = false;
+      _lookupError = failedLists.isEmpty
+          ? null
+          : 'Não foi possível carregar: ${failedLists.join(', ')}. Tente novamente.';
+    });
   }
 
   @override
@@ -132,6 +215,8 @@ class _InventoryFormScreenState extends State<InventoryFormScreen> {
     var completed = false;
 
     try {
+      _syncComputerControllers();
+      _syncRelationControllers();
       final inputs = _fieldControllers.map(
         (key, controller) => MapEntry(key, controller.text),
       );
@@ -196,6 +281,14 @@ class _InventoryFormScreenState extends State<InventoryFormScreen> {
                       title: title,
                       code: widget.item?.code,
                     ),
+                    if (_loadingLookups) ...[
+                      const SizedBox(height: 12),
+                      const LinearProgressIndicator(),
+                    ],
+                    if (_lookupError != null) ...[
+                      const SizedBox(height: 12),
+                      _InlineError(message: _lookupError!),
+                    ],
                     const SizedBox(height: 16),
                     _SectionCard(
                       title: 'Dados principais',
@@ -207,30 +300,37 @@ class _InventoryFormScreenState extends State<InventoryFormScreen> {
                           textCapitalization: TextCapitalization.words,
                           textInputAction: TextInputAction.next,
                           decoration: const InputDecoration(
-                            labelText: 'Responsável',
+                            labelText: 'Usuário',
                             prefixIcon: Icon(Icons.person_outline),
                           ),
                           validator: (value) => _requiredText(
                             value,
-                            label: 'o responsável',
-                            maximumLength: 160,
+                            label: 'o usuário',
+                            maximumLength: 60,
                           ),
                         ),
                         const SizedBox(height: 14),
-                        TextFormField(
-                          controller: _departmentController,
-                          enabled: !_submitting,
-                          textCapitalization: TextCapitalization.words,
-                          textInputAction: TextInputAction.next,
+                        DropdownButtonFormField<String>(
+                          key: ValueKey(
+                            'department-${_departmentValues.join('|')}',
+                          ),
+                          initialValue: _selectInitialValue(
+                            _departmentController.text,
+                            _departmentValues,
+                          ),
+                          isExpanded: true,
                           decoration: const InputDecoration(
                             labelText: 'Setor',
                             prefixIcon: Icon(Icons.business_outlined),
                           ),
-                          validator: (value) => _requiredText(
-                            value,
-                            label: 'o setor',
-                            maximumLength: 100,
-                          ),
+                          items: _departmentValues.map(_dropdownItem).toList(),
+                          onChanged: _submitting || _loadingLookups
+                              ? null
+                              : (value) =>
+                                    _departmentController.text = value ?? '',
+                          validator: (value) => value == null || value.isEmpty
+                              ? 'Selecione o setor.'
+                              : null,
                         ),
                         const SizedBox(height: 14),
                         TextFormField(
@@ -262,6 +362,9 @@ class _InventoryFormScreenState extends State<InventoryFormScreen> {
                         ),
                         const SizedBox(height: 14),
                         DropdownButtonFormField<String>(
+                          key: ValueKey(
+                            'status-${_availableStatuses.join('|')}',
+                          ),
                           initialValue: _status,
                           isExpanded: true,
                           decoration: const InputDecoration(
@@ -286,22 +389,6 @@ class _InventoryFormScreenState extends State<InventoryFormScreen> {
                           validator: (value) => value == null || value.isEmpty
                               ? 'Selecione o status.'
                               : null,
-                        ),
-                        const SizedBox(height: 10),
-                        SwitchListTile.adaptive(
-                          contentPadding: const EdgeInsets.symmetric(
-                            horizontal: 4,
-                          ),
-                          title: const Text('Item ativo'),
-                          subtitle: Text(
-                            _active
-                                ? 'Disponível nas listagens e operações'
-                                : 'Mantido no cadastro como inativo',
-                          ),
-                          value: _active,
-                          onChanged: _submitting
-                              ? null
-                              : (value) => setState(() => _active = value),
                         ),
                       ],
                     ),
@@ -380,49 +467,492 @@ class _InventoryFormScreenState extends State<InventoryFormScreen> {
     final widgets = <Widget>[];
     for (final field in inventoryFieldsFor(widget.category)) {
       if (widgets.isNotEmpty) widgets.add(const SizedBox(height: 14));
-      if (field.kind == InventoryFieldKind.boolean) {
-        widgets.add(
-          SwitchListTile.adaptive(
-            contentPadding: const EdgeInsets.symmetric(horizontal: 4),
-            title: Text(field.label),
-            value: _toggles[field.key] ?? false,
-            onChanged: _submitting
-                ? null
-                : (value) => setState(() => _toggles[field.key] = value),
-          ),
-        );
-        continue;
-      }
-
-      widgets.add(
-        TextFormField(
-          controller: _fieldControllers[field.key],
-          enabled: !_submitting,
-          keyboardType: field.maxLines > 1
-              ? TextInputType.multiline
-              : _keyboardTypeFor(field.kind),
-          textInputAction: field.maxLines > 1
-              ? TextInputAction.newline
-              : TextInputAction.next,
-          textCapitalization: _capitalizationFor(field.kind),
-          minLines: field.maxLines > 1 ? 2 : 1,
-          maxLines: field.maxLines,
-          decoration: InputDecoration(
-            labelText: field.required ? '${field.label} *' : field.label,
-            hintText: field.hint,
-            alignLabelWithHint: field.maxLines > 1,
-            helperText: _helperFor(field.kind),
-          ),
-          validator: (value) => _validateSpecificField(field, value ?? ''),
-        ),
-      );
+      widgets.add(_buildSpecificField(field));
     }
     return widgets;
   }
 
+  Widget _buildSpecificField(InventoryFieldSpec field) {
+    if (field.kind == InventoryFieldKind.boolean) {
+      return SwitchListTile.adaptive(
+        contentPadding: const EdgeInsets.symmetric(horizontal: 4),
+        title: Text(field.label),
+        value: _toggles[field.key] ?? false,
+        onChanged: _submitting
+            ? null
+            : (value) => setState(() => _toggles[field.key] = value),
+      );
+    }
+    if (field.kind == InventoryFieldKind.select) {
+      return _buildOptionSelect(field);
+    }
+    if (field.kind == InventoryFieldKind.processorSelect) {
+      return _buildLookupSelect(field, _processors);
+    }
+    if (field.kind == InventoryFieldKind.phoneSelect) {
+      return _buildLookupSelect(field, _phones);
+    }
+    if (field.kind == InventoryFieldKind.chipMultiSelect) {
+      return _buildMultiLookupSelect(
+        field: field,
+        selected: _selectedChipIds,
+        maximum: 2,
+      );
+    }
+    if (field.kind == InventoryFieldKind.whatsappMultiSelect) {
+      return _buildMultiLookupSelect(
+        field: field,
+        selected: _selectedWhatsappIds,
+        maximum: 6,
+      );
+    }
+    if (field.kind == InventoryFieldKind.integerList) {
+      return _buildRamModules(field);
+    }
+    if (field.kind == InventoryFieldKind.disks) {
+      return _buildComponentEditor(
+        field: field,
+        entries: _disks,
+        typeOptions: _optionValues('TipoDisco'),
+        amountLabel: 'Tamanho (GB)',
+        maximum: 6,
+      );
+    }
+    if (field.kind == InventoryFieldKind.videoCards) {
+      return _buildComponentEditor(
+        field: field,
+        entries: _videoCards,
+        typeOptions: _optionValues('TipoPlacaVideo'),
+        amountLabel: 'VRAM (GB)',
+        maximum: 4,
+      );
+    }
+    if (field.kind == InventoryFieldKind.stringList) {
+      return _buildConnectorEditor(field);
+    }
+
+    return TextFormField(
+      controller: _fieldControllers[field.key],
+      enabled: !_submitting,
+      keyboardType: field.maxLines > 1
+          ? TextInputType.multiline
+          : _keyboardTypeFor(field.kind),
+      textInputAction: field.maxLines > 1
+          ? TextInputAction.newline
+          : TextInputAction.next,
+      textCapitalization: _capitalizationFor(field.kind),
+      minLines: field.maxLines > 1 ? 2 : 1,
+      maxLines: field.maxLines,
+      decoration: InputDecoration(
+        labelText: field.required ? '${field.label} *' : field.label,
+        hintText: field.hint,
+        alignLabelWithHint: field.maxLines > 1,
+        helperText: _helperFor(field.kind),
+      ),
+      validator: (value) => _validateSpecificField(field, value ?? ''),
+    );
+  }
+
+  Widget _buildOptionSelect(InventoryFieldSpec field) {
+    final controller = _fieldControllers[field.key]!;
+    final values = _withCurrent(
+      _optionValues(field.optionType ?? ''),
+      controller.text,
+    );
+    return DropdownButtonFormField<String>(
+      key: ValueKey('option-${field.key}-${values.join('|')}'),
+      initialValue: _selectInitialValue(controller.text, values),
+      isExpanded: true,
+      decoration: InputDecoration(
+        labelText: field.required ? '${field.label} *' : field.label,
+      ),
+      items: [
+        if (!field.required)
+          const DropdownMenuItem(value: '', child: Text('Nenhum')),
+        ...values.map(_dropdownItem),
+      ],
+      onChanged: _submitting || _loadingLookups
+          ? null
+          : (value) => controller.text = value ?? '',
+      validator: (value) => field.required && (value == null || value.isEmpty)
+          ? 'Selecione ${field.label.toLowerCase()}.'
+          : null,
+    );
+  }
+
+  Widget _buildLookupSelect(
+    InventoryFieldSpec field,
+    List<InventoryLookupItem> items,
+  ) {
+    final controller = _fieldControllers[field.key]!;
+    final current = controller.text.trim();
+    final lookupItems = <InventoryLookupItem>[
+      ...items,
+      if (current.isNotEmpty && !items.any((item) => item.id == current))
+        InventoryLookupItem(id: current, label: current, raw: const {}),
+    ];
+    return DropdownButtonFormField<String>(
+      key: ValueKey('lookup-${field.key}-${lookupItems.length}-$current'),
+      initialValue: current.isEmpty ? '' : current,
+      isExpanded: true,
+      decoration: InputDecoration(labelText: field.label),
+      items: [
+        const DropdownMenuItem(value: '', child: Text('Nenhum')),
+        ...lookupItems.map(
+          (item) => DropdownMenuItem(
+            value: item.id,
+            child: Text(item.label, overflow: TextOverflow.ellipsis),
+          ),
+        ),
+      ],
+      onChanged: _submitting || _loadingLookups
+          ? null
+          : (value) => controller.text = value ?? '',
+    );
+  }
+
+  Widget _buildMultiLookupSelect({
+    required InventoryFieldSpec field,
+    required List<String> selected,
+    required int maximum,
+  }) {
+    final rows = <Widget>[];
+    for (var index = 0; index < selected.length; index++) {
+      final current = selected[index];
+      final items = <InventoryLookupItem>[
+        ..._chips,
+        if (current.isNotEmpty && !_chips.any((item) => item.id == current))
+          InventoryLookupItem(id: current, label: current, raw: const {}),
+      ];
+      rows.add(
+        Padding(
+          padding: const EdgeInsets.only(bottom: 10),
+          child: Row(
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  key: ValueKey('${field.key}-$index-$current-${items.length}'),
+                  initialValue: current.isEmpty ? null : current,
+                  isExpanded: true,
+                  decoration: InputDecoration(
+                    labelText: '${field.label} ${index + 1}',
+                  ),
+                  items: items
+                      .map(
+                        (item) => DropdownMenuItem(
+                          value: item.id,
+                          child: Text(
+                            item.label,
+                            overflow: TextOverflow.ellipsis,
+                          ),
+                        ),
+                      )
+                      .toList(),
+                  onChanged: _submitting || _loadingLookups
+                      ? null
+                      : (value) => setState(() {
+                          selected[index] = value ?? '';
+                          _syncRelationControllers();
+                        }),
+                ),
+              ),
+              IconButton(
+                tooltip: 'Remover',
+                onPressed: _submitting
+                    ? null
+                    : () => setState(() {
+                        selected.removeAt(index);
+                        _syncRelationControllers();
+                      }),
+                icon: const Icon(Icons.remove_circle_outline),
+              ),
+            ],
+          ),
+        ),
+      );
+    }
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        Text(field.label, style: Theme.of(context).textTheme.titleSmall),
+        const SizedBox(height: 8),
+        ...rows,
+        if (selected.length < maximum)
+          OutlinedButton.icon(
+            onPressed: _submitting || _loadingLookups
+                ? null
+                : () => setState(() => selected.add('')),
+            icon: const Icon(Icons.add),
+            label: Text('Adicionar ${field.label}'),
+          ),
+      ],
+    );
+  }
+
+  Widget _buildRamModules(InventoryFieldSpec field) {
+    final configured = _optionValues('TipoMemoriaRAM');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _quantitySelect(
+          label: 'Qtd. Slots',
+          value: _ramModules.length,
+          maximum: 8,
+          onChanged: (count) => setState(() {
+            while (_ramModules.length < count) {
+              _ramModules.add('');
+            }
+            if (_ramModules.length > count) {
+              _ramModules = _ramModules.sublist(0, count);
+            }
+            _syncComputerControllers();
+          }),
+        ),
+        for (var index = 0; index < _ramModules.length; index++) ...[
+          const SizedBox(height: 10),
+          DropdownButtonFormField<String>(
+            key: ValueKey(
+              'ram-$index-${_ramModules[index]}-${configured.length}',
+            ),
+            initialValue: _selectInitialValue(
+              _ramModules[index],
+              _withCurrent(configured, _ramModules[index]),
+            ),
+            isExpanded: true,
+            decoration: InputDecoration(labelText: 'Memória Slot ${index + 1}'),
+            items: _withCurrent(
+              configured,
+              _ramModules[index],
+            ).map(_dropdownItem).toList(),
+            onChanged: _submitting || _loadingLookups
+                ? null
+                : (value) => setState(() {
+                    _ramModules[index] = value ?? '';
+                    _syncComputerControllers();
+                  }),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildComponentEditor({
+    required InventoryFieldSpec field,
+    required List<_ComponentValue> entries,
+    required List<String> typeOptions,
+    required String amountLabel,
+    required int maximum,
+  }) {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _quantitySelect(
+          label: field.kind == InventoryFieldKind.disks
+              ? 'Qtd. Discos'
+              : 'Qtd. GPUs',
+          value: entries.length,
+          maximum: maximum,
+          onChanged: (count) => setState(() {
+            while (entries.length < count) {
+              entries.add(const _ComponentValue());
+            }
+            if (entries.length > count) {
+              entries.removeRange(count, entries.length);
+            }
+            _syncComputerControllers();
+          }),
+        ),
+        for (var index = 0; index < entries.length; index++) ...[
+          const SizedBox(height: 10),
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Expanded(
+                child: DropdownButtonFormField<String>(
+                  key: ValueKey(
+                    '${field.key}-type-$index-${entries[index].type}-${typeOptions.length}',
+                  ),
+                  initialValue: _selectInitialValue(
+                    entries[index].type,
+                    _withCurrent(typeOptions, entries[index].type),
+                  ),
+                  isExpanded: true,
+                  decoration: InputDecoration(labelText: 'Tipo ${index + 1}'),
+                  items: _withCurrent(
+                    typeOptions,
+                    entries[index].type,
+                  ).map(_dropdownItem).toList(),
+                  validator: (value) => value == null || value.isEmpty
+                      ? 'Selecione o tipo.'
+                      : null,
+                  onChanged: _submitting || _loadingLookups
+                      ? null
+                      : (value) => setState(() {
+                          entries[index] = entries[index].copyWith(
+                            type: value ?? '',
+                          );
+                          _syncComputerControllers();
+                        }),
+                ),
+              ),
+              const SizedBox(width: 10),
+              Expanded(
+                child: TextFormField(
+                  key: ValueKey('${field.key}-amount-$index'),
+                  initialValue: entries[index].amount,
+                  keyboardType: TextInputType.number,
+                  decoration: InputDecoration(labelText: amountLabel),
+                  onChanged: (value) {
+                    entries[index] = entries[index].copyWith(amount: value);
+                    _syncComputerControllers();
+                  },
+                  validator: (value) {
+                    if ((value ?? '').trim().isEmpty) {
+                      return 'Informe $amountLabel.';
+                    }
+                    return int.tryParse(value!.trim()) == null
+                        ? 'Informe um número inteiro.'
+                        : null;
+                  },
+                ),
+              ),
+            ],
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _buildConnectorEditor(InventoryFieldSpec field) {
+    final options = _optionValues('TipoConectorVideo');
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _quantitySelect(
+          label: 'Qtd. Conectores',
+          value: _videoConnectors.length,
+          maximum: 6,
+          onChanged: (count) => setState(() {
+            while (_videoConnectors.length < count) {
+              _videoConnectors.add('');
+            }
+            if (_videoConnectors.length > count) {
+              _videoConnectors = _videoConnectors.sublist(0, count);
+            }
+            _syncComputerControllers();
+          }),
+        ),
+        for (var index = 0; index < _videoConnectors.length; index++) ...[
+          const SizedBox(height: 10),
+          DropdownButtonFormField<String>(
+            key: ValueKey(
+              'connector-$index-${_videoConnectors[index]}-${options.length}',
+            ),
+            initialValue: _selectInitialValue(
+              _videoConnectors[index],
+              _withCurrent(options, _videoConnectors[index]),
+            ),
+            isExpanded: true,
+            decoration: InputDecoration(labelText: 'Conector ${index + 1}'),
+            items: _withCurrent(
+              options,
+              _videoConnectors[index],
+            ).map(_dropdownItem).toList(),
+            onChanged: _submitting || _loadingLookups
+                ? null
+                : (value) => setState(() {
+                    _videoConnectors[index] = value ?? '';
+                    _syncComputerControllers();
+                  }),
+          ),
+        ],
+      ],
+    );
+  }
+
+  Widget _quantitySelect({
+    required String label,
+    required int value,
+    required int maximum,
+    required ValueChanged<int> onChanged,
+  }) {
+    return DropdownButtonFormField<int>(
+      initialValue: value.clamp(0, maximum).toInt(),
+      decoration: InputDecoration(labelText: label),
+      items: [
+        for (var count = 0; count <= maximum; count++)
+          DropdownMenuItem(value: count, child: Text('$count')),
+      ],
+      onChanged: _submitting ? null : (selected) => onChanged(selected ?? 0),
+    );
+  }
+
+  List<String> get _departmentOptions => _optionValues('Setor');
+
+  List<String> get _departmentValues =>
+      _withCurrent(_departmentOptions, _departmentController.text);
+
   List<String> get _availableStatuses {
-    if (_statuses.contains(_status)) return _statuses;
-    return <String>[_status, ..._statuses];
+    final statuses = _optionValues('Status');
+    final base = statuses.isEmpty ? _fallbackStatuses : statuses;
+    return _withCurrent(base, _status);
+  }
+
+  List<String> _optionValues(String type) =>
+      _options[type.toLowerCase()] ?? const <String>[];
+
+  DropdownMenuItem<String> _dropdownItem(String value) => DropdownMenuItem(
+    value: value,
+    child: Text(_optionLabel(value), overflow: TextOverflow.ellipsis),
+  );
+
+  List<String> _withCurrent(Iterable<String> values, String current) {
+    final result = values
+        .map((value) => value.trim())
+        .where((value) => value.isNotEmpty)
+        .toSet()
+        .toList();
+    final normalizedCurrent = current.trim();
+    if (normalizedCurrent.isNotEmpty && !result.contains(normalizedCurrent)) {
+      result.insert(0, normalizedCurrent);
+    }
+    return result;
+  }
+
+  String? _selectInitialValue(String value, List<String> options) {
+    final normalized = value.trim();
+    if (normalized.isEmpty || !options.contains(normalized)) return null;
+    return normalized;
+  }
+
+  void _syncComputerControllers() {
+    if (widget.category != InventoryCategory.computers) return;
+    _fieldControllers['memoriaRAM']?.text = _ramModules
+        .map((value) => RegExp(r'\d+').firstMatch(value)?.group(0) ?? value)
+        .where((value) => value.isNotEmpty)
+        .join(', ');
+    _fieldControllers['discos']?.text = _disks
+        .where((entry) => entry.type.isNotEmpty || entry.amount.isNotEmpty)
+        .map((entry) => '${entry.type}:${entry.amount}')
+        .join('; ');
+    _fieldControllers['placasVideo']?.text = _videoCards
+        .where((entry) => entry.type.isNotEmpty || entry.amount.isNotEmpty)
+        .map((entry) => '${entry.type}:${entry.amount}')
+        .join('; ');
+    _fieldControllers['conectoresVideo']?.text = _videoConnectors
+        .where((value) => value.isNotEmpty)
+        .join(', ');
+  }
+
+  void _syncRelationControllers() {
+    _fieldControllers['chipIds']?.text = _selectedChipIds
+        .where((value) => value.isNotEmpty)
+        .toSet()
+        .join(', ');
+    _fieldControllers['contasWhatsapp']?.text = _selectedWhatsappIds
+        .where((value) => value.isNotEmpty)
+        .toSet()
+        .join(', ');
   }
 
   String? _validateSpecificField(InventoryFieldSpec field, String value) {
@@ -662,6 +1192,56 @@ String _statusLabel(String status) {
     'NecessitaManutenção' => 'Necessita manutenção',
     _ => status,
   };
+}
+
+String _optionLabel(String value) {
+  if (value.isEmpty) return 'Nenhum';
+  return value
+      .replaceAll('_', ' ')
+      .replaceAllMapped(RegExp(r'(?<=[a-zá-ú])(?=[A-ZÁ-Ú])'), (_) => ' ');
+}
+
+List<dynamic> _asList(dynamic value) =>
+    value is Iterable ? value.toList() : const <dynamic>[];
+
+List<String> _stringIds(dynamic value) {
+  return _asList(value)
+      .map((entry) {
+        if (entry is Map) {
+          return (entry['id'] ?? entry['chipId'])?.toString() ?? '';
+        }
+        return entry.toString();
+      })
+      .map((entry) => entry.trim())
+      .where((entry) => entry.isNotEmpty)
+      .toSet()
+      .toList();
+}
+
+_ComponentValue _componentFromDisk(dynamic value) {
+  if (value is! Map) return const _ComponentValue();
+  return _ComponentValue(
+    type: value['tipo']?.toString() ?? '',
+    amount: value['tamanho']?.toString() ?? '',
+  );
+}
+
+_ComponentValue _componentFromVideoCard(dynamic value) {
+  if (value is! Map) return const _ComponentValue();
+  return _ComponentValue(
+    type: value['tipo']?.toString() ?? '',
+    amount: value['vram']?.toString() ?? '',
+  );
+}
+
+class _ComponentValue {
+  const _ComponentValue({this.type = '', this.amount = ''});
+
+  final String type;
+  final String amount;
+
+  _ComponentValue copyWith({String? type, String? amount}) =>
+      _ComponentValue(type: type ?? this.type, amount: amount ?? this.amount);
 }
 
 String _categoryNoun(InventoryCategory category) {

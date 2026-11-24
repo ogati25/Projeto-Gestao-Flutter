@@ -26,6 +26,7 @@ App Flutter ─┘
 - encerramento automático da sessão quando a API retorna `401`;
 - dashboard com totais, ativos, manutenção, distribuição, itens críticos e atividades;
 - CRUD do inventário nas nove categorias: cadastro, consulta, edição e exclusão;
+- formulários equivalentes aos da versão web, com opções carregadas do MySQL e seletores de processador, celular, chips e contas WhatsApp;
 - ativação e inativação de itens sem perder os demais dados cadastrados;
 - busca local, detalhes, validação de formulários e confirmação antes da exclusão;
 - perfil do usuário e logout;
@@ -80,6 +81,5 @@ flutter build apk --debug
 
 ## Próximas etapas planejadas
 
-- seletores visuais para vínculos entre celulares, chips e processadores;
 - relatórios em PDF e Excel;
 - tema escuro e preferências persistidas.

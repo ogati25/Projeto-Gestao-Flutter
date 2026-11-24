@@ -11,6 +11,69 @@ import 'package:http/testing.dart';
 
 void main() {
   group('InventoryService', () {
+    test('carrega e normaliza as opcoes usadas nos selects', () async {
+      final harness = _serviceWith((request) async {
+        expect(request.method, 'GET');
+        expect(request.url.path, '/api/opcoes');
+        return _jsonResponse({
+          'Setor': ['TI', 'Financeiro', 'TI', ''],
+          'TipoComputador': ['Notebook', 'PC_Desktop'],
+        });
+      });
+
+      final options = await harness.service.loadOptions();
+
+      expect(options['setor'], ['TI', 'Financeiro']);
+      expect(options['tipocomputador'], ['Notebook', 'PC_Desktop']);
+      harness.client.close();
+    });
+
+    test('carrega processadores para o formulario de computador', () async {
+      final harness = _serviceWith((request) async {
+        expect(request.method, 'GET');
+        expect(request.url.path, '/api/processadores');
+        return _jsonResponse([
+          {'id': 'cpu-1', 'nome': 'Core i5', 'velocidade': 3.2},
+        ]);
+      });
+
+      final processors = await harness.service.listProcessors();
+
+      expect(processors, hasLength(1));
+      expect(processors.single.id, 'cpu-1');
+      expect(processors.single.label, 'Core i5 - 3.2 GHz');
+      harness.client.close();
+    });
+
+    test('carrega celulares e chips para os relacionamentos', () async {
+      var requestCount = 0;
+      final harness = _serviceWith((request) async {
+        requestCount++;
+        if (request.url.path == '/api/celulares') {
+          return _jsonResponse([
+            {'id': 'phone-1', 'codigo': 'CEL-001', 'modelo': 'Galaxy A54'},
+          ]);
+        }
+        expect(request.url.path, '/api/chips');
+        return _jsonResponse([
+          {
+            'id': 'chip-1',
+            'numero': '(11) 99999-1234',
+            'dono': 'Ana',
+            'operadora': 'Vivo',
+          },
+        ]);
+      });
+
+      final phones = await harness.service.listPhones();
+      final chips = await harness.service.listChips();
+
+      expect(phones.single.label, 'CEL-001 - Galaxy A54');
+      expect(chips.single.label, '(11) 99999-1234 - Ana - Vivo');
+      expect(requestCount, 2);
+      harness.client.close();
+    });
+
     test(
       'lista a categoria pela rota autenticada e converte os itens',
       () async {
